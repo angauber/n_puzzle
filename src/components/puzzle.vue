@@ -1,5 +1,5 @@
 <template lang="html">
-	<div class="theming-container ui container">
+	<div class="theming-container ui container" v-on:keyup="keymonitor">
 		<sui-dropdown
 			placeholder="Size"
 			selection
@@ -62,34 +62,22 @@ export default {
 			tab[this.current - 1][this.current - 1] = 0;
 			this.final_state = tab;
 			this.puzzle = JSON.parse(JSON.stringify(tab));
+			this.shuffle();
+		},
+		keymonitor: function(event) {
+			console.log(event.key);
+			if(event.key == "Enter")
+			{
+				console.log('the id of the input was:' + event.currentTarget.id);
+				console.log("enter key was pressed!");
+			}
 		},
 		shuffle: function() {
-			const length = this.current * this.current;
-			let shuffle = [];
-			let tab = [];
-			let k = 0;
-			for (let i = 0; i < length; i++) {
-				shuffle.push(i);
+			let nb;
+			for (let i = 0; i < 1000; i++) {
+				nb = Math.floor(Math.random() * 3);
+				this.move(nb);
 			}
-			shuffle = this.rand_shuffle(shuffle);
-			for(let i = 0; i < this.current; i++) {
-				tab[i] = [];
-				for(let j = 0; j < this.current; j++) {
-					tab[i][j] = shuffle[k];
-					k++;
-				}
-			}
-			this.puzzle = tab;
-			while (this.is_solvable(this.puzzle) === false) {
-				this.shuffle();
-			}
-		},
-		rand_shuffle: function(a) {
-    		for (let i = a.length - 1; i > 0; i--) {
-        		const j = Math.floor(Math.random() * (i + 1));
-        		[a[i], a[j]] = [a[j], a[i]];
-    		}
-    		return a;
 		},
 		play: function(nb) {
 			let tab = this.puzzle;
@@ -103,6 +91,47 @@ export default {
 							tab[i][j] = 0;
 							this.puzzle = tab;
 							this.$forceUpdate();
+						}
+						return ;
+					}
+				}
+			}
+		},
+		move(key) {
+			let tab = this.puzzle;
+
+			for (let i = 0; i < this.current; i++) {
+				for (let j = 0; j < this.current; j++) {
+					if (tab[i][j] == 0) {
+						switch (key) {
+							case 0:
+								if (i < this.current - 1) {
+									tab[i][j] = tab[i + 1][j];
+									tab[i + 1][j] = 0;
+									this.$forceUpdate();
+								}
+								break;
+							case 1:
+								if (j > 0) {
+									tab[i][j] = tab[i][j - 1];
+									tab[i][j - 1] = 0;
+									this.$forceUpdate();
+								}
+								break;
+							case 2:
+								if (i > 0) {
+									tab[i][j] = tab[i - 1][j];
+									tab[i - 1][j] = 0;
+									this.$forceUpdate();
+								}
+								break;
+							case 3:
+								if (j < this.current - 1) {
+									tab[i][j] = tab[i][j + 1];
+									tab[i][j + 1] = 0;
+									this.$forceUpdate();
+								}
+								break;
 						}
 						return ;
 					}
@@ -275,11 +304,36 @@ export default {
 				solution.unshift(solved);
 				solved = solved.parent;
 			}
+			for (let i = 0; i < solution.length; i++) {
+				this.timeout(solution[i]);
+			}
 			console.log(solution);
+		},
+		timeout: function(sol) {
+			let self = this;
+			setTimeout(function() {
+				self.puzzle = JSON.parse(JSON.stringify(sol));
+				console.log(sol);
+			}, 1000);
 		}
 	},
 	mounted: function() {
 		this.init();
+		window.addEventListener('keydown', (e) => {
+			if (e.code === 'ArrowUp') {
+				this.move(0);
+			}
+			else if (e.code === 'ArrowRight') {
+				this.move(1);
+			}
+			else if (e.code === 'ArrowDown') {
+				this.move(2);
+			}
+			else if (e.code === 'ArrowLeft') {
+				this.move(3);
+			}
+		});
 	}
 };
 </script>
+
