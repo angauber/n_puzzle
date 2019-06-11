@@ -1,5 +1,5 @@
 <template lang="html">
-	<div class="theming-container ui container" v-on:keyup="keymonitor">
+	<div class="theming-container ui container" v-bind:style="blurrStyle">
 		<sui-dropdown
 			placeholder="Size"
 			selection
@@ -20,6 +20,8 @@
 		</sui-container>
 		<sui-button v-on:click="shuffle()" basic color="orange" style="margin: 50px 20px">Shuffle</sui-button>
 		<sui-button v-on:click="start_solve()" basic color="yellow">Solve</sui-button>
+		<!-- <div style="position: absolute; top: 0; left: 0; border: 2px solid blue; width: 100%; height: 100%; z-index: -1;">
+		</div> -->
 	</div>
 </template>
 
@@ -44,8 +46,10 @@ export default {
 				text: '6 x 6',
 				value: 6,
 			}],
+			blurrStyle: {},
 			puzzle: [],
 			final_state: [],
+			solving: false,
 		};
 	},
 	methods: {
@@ -64,19 +68,12 @@ export default {
 			this.puzzle = JSON.parse(JSON.stringify(tab));
 			this.shuffle();
 		},
-		keymonitor: function(event) {
-			console.log(event.key);
-			if(event.key == "Enter")
-			{
-				console.log('the id of the input was:' + event.currentTarget.id);
-				console.log("enter key was pressed!");
-			}
-		},
 		shuffle: function() {
-			let nb;
-			for (let i = 0; i < 1000; i++) {
-				nb = Math.floor(Math.random() * 3);
-				this.move(nb);
+			let arr;
+			for (let i = 0; i < 100; i++) {
+				arr = this.get_moves();
+				// console.log(arr);
+				this.move(arr[Math.floor(Math.random()*arr.length)]);
 			}
 		},
 		play: function(nb) {
@@ -96,6 +93,30 @@ export default {
 					}
 				}
 			}
+		},
+		get_moves() {
+			let arr = [];
+			let tab = this.puzzle;
+
+			for (let i = 0; i < this.current; i++) {
+				for (let j = 0; j < this.current; j++) {
+					if (tab[i][j] == 0) {
+						if (i < this.current - 1) {
+							arr.push(0);
+						}
+						if (j > 0) {
+							arr.push(1);
+						}
+						if (i > 0) {
+							arr.push(2);
+						}
+						if (j < this.current - 1) {
+							arr.push(3);
+						}
+					}
+				}
+			}
+			return arr;
 		},
 		move(key) {
 			let tab = this.puzzle;
@@ -176,6 +197,11 @@ export default {
 			return false;
 		},
 		start_solve: function() {
+			this.solving = true;
+			this.blurrStyle = {filter: "blur(3px)",
+						filter: "url('blur.svg#gaussian_blur')",
+						'-webkit-filter': "blur(3px)"
+			};
 			let t0 = performance.now();
 
 			this.a_star();   // <---- The function you're measuring time for
@@ -200,6 +226,8 @@ export default {
 				current = this.get_least_f(opened);
 				if (this.is_equal(current, this.final_state)) {
 					console.log('finished');
+					this.blurrStyle = {};
+					this.solving = false;
 					this.resolve(current);
 					return ;
 				}
@@ -219,7 +247,7 @@ export default {
 						opened = [...opened, neighbor];					 //Adding elem in open list
 					}
 					else if (gScore < neighbor.g) {
-						console.log('lol');							// wer may got a problem here
+						console.log('lol');							// we may got a problem here
 						gScoreIsBest = true;
 					}
 
@@ -304,36 +332,38 @@ export default {
 				solution.unshift(solved);
 				solved = solved.parent;
 			}
-			for (let i = 0; i < solution.length; i++) {
-				this.timeout(solution[i]);
-			}
+			this.resolve_loop(solution, 0);
 			console.log(solution);
 		},
-		timeout: function(sol) {
+		resolve_loop: function(sols, i) {
 			let self = this;
-			setTimeout(function() {
-				self.puzzle = JSON.parse(JSON.stringify(sol));
-				console.log(sol);
-			}, 1000);
+			setTimeout(function () {    //  call a 3s setTimeout when the loop is called
+				self.puzzle = JSON.parse(JSON.stringify(sols[i]));
+				i++;                     //  increment the counter
+				if (i < sols.length) {            //  if the counter < 10, call the loop function
+					self.resolve_loop(sols, i);             //  ..  again which will trigger another
+				}                        //  ..  setTimeout()
+			}, 300)
 		}
 	},
 	mounted: function() {
 		this.init();
-		window.addEventListener('keydown', (e) => {
-			if (e.code === 'ArrowUp') {
-				this.move(0);
-			}
-			else if (e.code === 'ArrowRight') {
-				this.move(1);
-			}
-			else if (e.code === 'ArrowDown') {
-				this.move(2);
-			}
-			else if (e.code === 'ArrowLeft') {
-				this.move(3);
-			}
-		});
+		if (this.solving === false) {
+			window.addEventListener('keydown', (e) => {
+				if (e.code === 'ArrowUp') {
+					this.move(0);
+				}
+				else if (e.code === 'ArrowRight') {
+					this.move(1);
+				}
+				else if (e.code === 'ArrowDown') {
+					this.move(2);
+				}
+				else if (e.code === 'ArrowLeft') {
+					this.move(3);
+				}
+			});
+		}
 	}
 };
 </script>
-
