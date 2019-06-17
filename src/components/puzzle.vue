@@ -1,19 +1,31 @@
 <template lang="html">
 	<div class="theming-container ui container" v-bind:style="blurrStyle">
+		<h1>
+			n_puzzle solver
+		</h1>
+		<h3>
+			A* algorithm implementation with multiple heuristics
+		</h3>
 		<sui-dropdown
-			placeholder="Size"
 			selection
 			:options="options"
 			v-model="current"
 			v-on:input="init();"
-			style="margin-top: 20px"
+			style="margin-top: 20px; margin-right: 10px;"
+		/>
+		<sui-dropdown
+			selection
+			:options="heuristics"
+			v-model="current_heur"
+			v-on:input=""
+			style="margin-top: 20px;"
 		/>
 		<sui-container>
 			<sui-grid class="ui middle aligned centered" style="margin-top: 10px;">
 				<sui-grid-row v-for="column in puzzle">
 					<div v-for="nb in column">
-						<sui-segment v-if="nb !== 0" v-on:click="play(nb);" style="cursor: pointer; margin-left: 15px; margin-right: 15px; width: 40px; text-align: center;">{{ nb }}</sui-segment>
-						<sui-segment v-else style="visibility: hidden; margin-left: 15px; margin-right: 15px; width: 40px">0</sui-segment>
+						<sui-segment v-if="nb !== 0" v-on:click="play(nb);" style="cursor: pointer; line-height: 1; font-size: 16px; margin-left: 15px; margin-right: 15px; width: 50px; height: 50px; text-align: center;">{{ nb }}</sui-segment>
+						<sui-segment v-else style="visibility: hidden; margin-left: 15px; margin-right: 15px; width: 50px; height: 50px;">0</sui-segment>
 					</div>
 				</sui-grid-row>
 			</sui-grid>
@@ -31,6 +43,7 @@ export default {
 	data() {
 		return {
 			current: 3,
+			current_heur: 1,
 			solving: false,
 			options: [{
 				text: '3 x 3',
@@ -45,6 +58,18 @@ export default {
 			{
 				text: '6 x 6',
 				value: 6,
+			}],
+			heuristics: [{
+				text: 'Hamming',
+				value: 0
+			},
+			{
+				text: 'Manhattan',
+				value: 1
+			},
+			{
+				text: 'Euclidian',
+				value: 2
 			}],
 			blurrStyle: {},
 			puzzle: [],
@@ -89,6 +114,7 @@ export default {
 							this.puzzle = tab;
 							this.$forceUpdate();
 						}
+						// this.heuristic_test();
 						return ;
 					}
 				}
@@ -207,7 +233,7 @@ export default {
 			this.a_star();   // <---- The function you're measuring time for
 
 			let t1 = performance.now();
-			console.log("Call to a_star took " + (t1 - t0) + " milliseconds.")
+			console.log("Call to a_star took " + Math.round(t1 - t0) + " milliseconds.")
 		},
 		a_star: function() {
 			console.log('starting');
@@ -218,7 +244,7 @@ export default {
 
 			start = JSON.parse(JSON.stringify(this.puzzle));
 			start.g = 0;
-			start.h = this.h_Hamming(start);
+			start.h = this.heuristic(start);
 			start.f = start.h;
 			start.parent = null;
 			opened = [...opened, start];
@@ -274,7 +300,7 @@ export default {
 						child[pos[0]][pos[1]] = node[i][j];
 						child[i][j] = 0;
 						child.g = node.g + 1;
-						child.h = this.h_Hamming(child);
+						child.h = this.heuristic(child);
 						child.f = child.g + child.h;
 						childs = [...childs, child];
 					}
@@ -303,6 +329,71 @@ export default {
 				}
 			}
 			return h;
+		},
+		h_Manhattan: function(tab2) {
+			let tab1 = this.final_state;
+			let h = 0;
+			for(let i = 0; i < this.current; i++) {
+				for(let j = 0; j < this.current; j++) {
+					if (tab2[i][j] !== 0) {
+						h += Math.abs(this.get_coordinates(tab1, tab2[i][j], 'x') - i) + Math.abs(this.get_coordinates(tab1, tab2[i][j], 'y') - j);
+					}
+				}
+			}
+			return h;
+		},
+		h_Linear_conflict: function(tab2) {
+			let h;
+			h = h_Manhattan(tab2) + 2 * this.linear_conflicts(tab2);
+		},
+		h_Euclidian: function(tab2) {
+			let tab1 = this.final_state;
+			let h = 0;
+			for(let i = 0; i < this.current; i++) {
+				for(let j = 0; j < this.current; j++) {
+					if (tab2[i][j] !== 0) {
+						h += Math.sqrt(Math.pow(this.get_coordinates(tab1, tab2[i][j], 'x') - i, 2) + Math.pow(this.get_coordinates(tab1, tab2[i][j], 'y') - j, 2));
+					}
+				}
+			}
+			return h;
+		},
+		linear_conflicts(tab) {
+			let r = 0;
+			for (let i = 0; i < tab.length; i++) {	// looking in rows
+				r += this.get_linear_conflicts(tab[i], this.puzzle[i]);
+			}
+			console.log(r);
+		},
+		get_coordinates(tab, nb, axe) {
+			for (let i = 0; i < tab.length; i++) {
+				for (let j = 0; j < tab.length; j++) {
+					if (tab[i][j] === nb) {
+						if (axe === 'x') {
+							return i;
+						}
+						else {
+							return j;
+						}
+					}
+				}
+			}
+		},
+		heuristic_test: function() {
+			console.log('hamming: ' + this.h_Hamming(this.puzzle));
+			console.log('manhattan: ' + this.h_Manhattan(this.puzzle));
+			console.log('euclidian: ' + this.h_Euclidian(this.puzzle));
+		},
+		heuristic: function(tab) {
+			if (this.current_heur === 0) {
+				return this.h_Hamming(tab);
+			}
+			else if (this.current_heur === 1) {
+				return this.h_Manhattan(tab);
+			}
+			else if (this.current_heur === 2) {
+				return this.h_Euclidian(tab);
+			}
 		},
 		is_inside: function(haystack, needle) {
 			for (let i = 0; i < haystack.length; i++) {
