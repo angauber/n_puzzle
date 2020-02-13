@@ -1,5 +1,5 @@
 # n_puzzle
 
-Visualisator for python version made with kaiment https://github.com/Kaiment/n-puzzle
+Visualisator for n_puzzle solver made with in python3 with kai, see https://github.com/Kaiment/n-puzzle
 
-Web test version [angauber.github.io](https://angauber.github.io)
+Web test version here [angauber.github.io](https://angauber.github.io)
